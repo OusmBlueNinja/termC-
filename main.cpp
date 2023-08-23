@@ -79,14 +79,6 @@ void displayFileInfo(const std::string& filePath) {
 
 
 
-
-
-
-
-
-
-
-
 class PackageManager {
 public:
     void installPackage(const std::string& packageName) {
@@ -150,9 +142,11 @@ private:
         std::vector<std::string> tokens = splitInput(input);
         if (tokens.empty()) {
             return;
-        }
+        } 
 
         std::string command = tokens[0];
+        
+        
 
         if (command == "exit") {
             exit(0);
@@ -187,8 +181,22 @@ private:
         }
         else if (command == "ls") {
             listShort(".");
+        } 
+        else if (command == "rm") {
+            if (tokens.size() < 2) {
+                displayErrorMessage("File not Specified", "No file specified to be removed");
+            } else {
+                if (std::filesystem::exists(tokens[1])) {
+                    if (remove(tokens[1].c_str()) != 0) {
+                        std::cout << "error" << std::endl;
+                    }
+                } else {
+                    displayErrorMessage("File not found", "The specified file was not found");
+                }
+                
+            }
+
         }
-        
         else {
             displayErrorMessage("Command not found", "The specified command is not recognized.");
         }
