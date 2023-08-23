@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <map>
@@ -75,7 +76,10 @@ void displayFileInfo(const std::string& filePath) {
 
 
 
-
+void mkFile(const std::string& fileName) {
+    std::ofstream outfile (fileName.c_str());
+    outfile.close();
+}
 
 
 
@@ -134,10 +138,6 @@ private:
         char* username = getenv("USER"); // Get the username
         std::string path = std::string(cwd); // get path
         const char* homeDir = getenv("HOME");
-
-        
-
-    
         return whiteColor + "┌ " + greenColor + std::string(username) + whiteColor + ":" + blueColor + std::string(path) + whiteColor + "\n└ $ ";
     }
 
@@ -147,11 +147,7 @@ private:
         if (tokens.empty()) {
             return;
         } 
-
         std::string command = tokens[0];
-        
-        
-
         if (command == "exit") {
             exit(0);
         }
@@ -190,17 +186,25 @@ private:
             if (tokens.size() < 2) {
                 displayErrorMessage("File not Specified", "No file specified to be removed");
             } else {
-                if (std::filesystem::exists(tokens[1])) {
-                    if (remove(tokens[1].c_str()) != 0) {
-                        std::cout << "error" << std::endl;
+                for (int i = 1; i < tokens.size(); i++) {
+                    if (std::filesystem::exists(tokens[i])) {
+                        //std::cout << tokens[i].c_str() << std::endl;
+                        if (remove(tokens[1].c_str()) != 0) {
+                            std::string errorMessage = "The specified file was not able to be removed: ";
+                            displayErrorMessage("Unable to Remove File", errorMessage + tokens[i]);
+                        }
+                    } else {
+                        displayErrorMessage("File not found", "The specified file was not found");
                     }
-                } else {
-                    displayErrorMessage("File not found", "The specified file was not found");
                 }
 
             }
 
         }
+        else if (command == "toutch") {
+            mkFile(tokens[1].c_str());
+            
+        } 
         else {
             displayErrorMessage("Command not found", "The specified command is not recognized.");
         }
@@ -215,9 +219,6 @@ private:
         }
         return tokens;
     }
-
-
-
     void listFilesInDirectory(const std::string& dirPath) {
     DIR* dir;
     struct dirent* entry;
@@ -249,16 +250,11 @@ private:
 
         // Close the directory
         closedir(dir);
+        std::cout << "\n";
     } else {
         displayErrorMessage("Error opening directory", "Unable to open the specified directory.");
     }
 }
-
-
-
-
-
-
     void clearScreen() {
         std::cout << "\033[H\033[2J"; // ANSI escape codes to clear the screen
         std::cout.flush();
