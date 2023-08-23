@@ -39,28 +39,45 @@ void displayFileInfo(const std::string& filePath) {
         struct passwd *pw = getpwuid(fileStat.st_uid);
         struct group *gr = getgrgid(fileStat.st_gid);
 
-        std::cout << (S_ISDIR(fileStat.st_mode) ? blueColor + "d" : "-")
+        bool isHidden = (fileName.size() > 0 && fileName[0] == '.');
+        
+        std::string timeStr = ctime(&fileStat.st_mtime);
+        if (!timeStr.empty() && timeStr.back() == '\n') {
+            timeStr.pop_back(); // Remove newline character
+        }
+        
+        std::cout << std::left
+                  << std::setw(11)
                   << ((fileStat.st_mode & S_IRUSR) ? greenColor + "r" : whiteColor + "-")
                   << ((fileStat.st_mode & S_IWUSR) ? blueColor + "w" : whiteColor + "-")
-                  << ((fileStat.st_mode & S_IXUSR) ? orangeColor + "x" : whiteColor + "-")
+                  << ((fileStat.st_mode & S_IXUSR) ? (isHidden ? orangeColor : greenColor) + "x" : whiteColor + "-")
                   << ((fileStat.st_mode & S_IRGRP) ? greenColor + "r" : whiteColor + "-")
                   << ((fileStat.st_mode & S_IWGRP) ? blueColor + "w" : whiteColor + "-")
-                  << ((fileStat.st_mode & S_IXGRP) ? orangeColor + "x" : whiteColor + "-")
+                  << ((fileStat.st_mode & S_IXGRP) ? (isHidden ? orangeColor : greenColor) + "x" : whiteColor + "-")
                   << ((fileStat.st_mode & S_IROTH) ? greenColor + "r" : whiteColor + "-")
                   << ((fileStat.st_mode & S_IWOTH) ? blueColor + "w" : whiteColor + "-")
-                  << ((fileStat.st_mode & S_IXOTH) ? orangeColor + "x" : whiteColor + "-")
-                  << " " << fileStat.st_nlink << " "
-                  << greenColor << pw->pw_name << whiteColor << " "
-                  << greenColor << gr->gr_name << whiteColor << " "
-                  << blueColor << fileStat.st_size << whiteColor << " "
-                  << (S_ISDIR(fileStat.st_mode) ? blueColor : (fileStat.st_mode & S_IXUSR) ? orangeColor : whiteColor)
-                  << fileName << whiteColor << " "
-                  << ctime(&fileStat.st_mtime);
+                  << ((fileStat.st_mode & S_IXOTH) ? (isHidden ? orangeColor : greenColor) + "x" : whiteColor + "-")
+                  << " " << whiteColor
+                  << std::right
+                  << std::setw(4) << fileStat.st_nlink << " "
+                  << greenColor << std::setw(8) << pw->pw_name << whiteColor << " "
+                  << greenColor << std::setw(8) << gr->gr_name << whiteColor << " "
+                  << blueColor << std::setw(8) << fileStat.st_size << whiteColor << " "
+                  << timeStr << " "
+                  << (S_ISDIR(fileStat.st_mode) ? blueColor : (fileStat.st_mode & S_IXUSR) ? (isHidden ? orangeColor : greenColor) : whiteColor)
+                  << fileName << whiteColor << " " << "\n";
 
     } else {
         displayErrorMessage("Error getting file information", "Unable to get information about the file.");
     }
 }
+
+
+
+
+
+
+
 
 
 
@@ -190,29 +207,41 @@ private:
 
 
     void listFilesInDirectory(const std::string& dirPath) {
-    namespace fs = std::filesystem;
-
-    // Open the directory
     DIR* dir;
     struct dirent* entry;
     if ((dir = opendir(dirPath.c_str())) != nullptr) {
-        // Loop through the directory entries
+        std::cout << "total "; // Start the line with "total" to mimic `ls -l` behavior
+        long totalSize = 0; // Total size of all files in the directory
+
         while ((entry = readdir(dir)) != nullptr) {
-            // Exclude hidden files and directories
-            if (entry->d_name[0] != '.') {
+                std::string filePath = dirPath + "/" + entry->d_name;
+                struct stat fileStat;
+                if (stat(filePath.c_str(), &fileStat) == 0) {
+                    totalSize += fileStat.st_size;
+                }
+            
+        }
+
+        // Print the total size in kilobytes
+        std::cout << (totalSize + 1023) / 1024 << "\n";
+
+        // Close and reopen the directory to start iterating over entries again
+        closedir(dir);
+        dir = opendir(dirPath.c_str());
+
+        while ((entry = readdir(dir)) != nullptr) {
                 std::string filePath = dirPath + "/" + entry->d_name;
                 displayFileInfo(filePath);
-            }
+            
         }
 
         // Close the directory
         closedir(dir);
-        std::cout << "\n";
     } else {
         displayErrorMessage("Error opening directory", "Unable to open the specified directory.");
     }
+}
 
-    }
 
 
 
