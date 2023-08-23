@@ -132,10 +132,14 @@ private:
         std::string whiteColor = "\033[0m";    // Reset color
 
         char* username = getenv("USER"); // Get the username
-        return greenColor + std::string(username) + whiteColor + ":" +
-               blueColor + std::string(cwd) + whiteColor + " $ ";
-    }
+        std::string path = std::string(cwd); // get path
+        const char* homeDir = getenv("HOME");
 
+        
+
+    
+        return whiteColor + "┌ " + greenColor + std::string(username) + whiteColor + ":" + blueColor + std::string(path) + whiteColor + "\n└ $ ";
+    }
 
 
     void handleInput(const std::string& input) {
@@ -193,7 +197,7 @@ private:
                 } else {
                     displayErrorMessage("File not found", "The specified file was not found");
                 }
-                
+
             }
 
         }
