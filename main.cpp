@@ -15,6 +15,8 @@
 #include <pwd.h>   // Add this header for getpwuid
 #include <grp.h>   // Add this header for getgrgid
 
+
+// \/  \/  \/  \/  \/  \/  <-- Import package manager exam.: pacman, apt
 #include "packages.hpp"
 
 
