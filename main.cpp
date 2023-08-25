@@ -14,10 +14,9 @@
 #include <filesystem>
 #include <pwd.h>   // Add this header for getpwuid
 #include <grp.h>   // Add this header for getgrgid
+#include <dlfcn.h>
 
 
-// \/  \/  \/  \/  \/  \/  <-- Import package manager exam.: pacman, apt
-#include "packages.hpp"
 
 
 
@@ -89,9 +88,9 @@ void mkFile(const std::string& fileName) {
 
 class PackageManager {
 public:
+
     void installPackage(const std::string& packageName) {
-        // Simulate package installation logic
-        installedPackages.push_back(packageName);
+        installCommand(packageName);
     }
 
     void listInstalledPackages() const {
@@ -100,9 +99,41 @@ public:
             std::cout << "- " << packageName << "\n";
         }
     }
+    
 
 private:
     std::vector<std::string> installedPackages;
+    std::map<std::string, void*> loadedCommands; // Add this line
+
+    void installCommand(const std::string& commandName) {
+        std::string sourceFilePath = "commands/" + commandName + ".hpp";
+        std::string destFilePath = "packages/" + commandName + ".so";
+
+        if (std::filesystem::exists(sourceFilePath)) {
+            std::string compileCommand = "g++ -shared -o " + destFilePath + " " + sourceFilePath;
+            if (std::filesystem::exists(destFilePath)) {
+                loadCommand(commandName);
+                return;
+            } 
+            else if (system(compileCommand.c_str()) == 0) {
+                loadCommand(commandName);
+            } else {
+                std::cerr << "Error compiling command: " << commandName << std::endl;
+            }
+        } else {
+            std::cerr << "Command source not found: " << commandName << std::endl;
+        }
+    }
+
+    void loadCommand(const std::string& commandName) {
+        std::string libraryPath = "packages/" + commandName + ".so";
+        void* libraryHandle = dlopen(libraryPath.c_str(), RTLD_LAZY);
+        if (libraryHandle) {
+            loadedCommands[commandName] = libraryHandle;
+        } else {
+            std::cerr << "Error loading library: " << dlerror() << std::endl;
+        }
+    }
 };
 
 class Shell {
@@ -127,9 +158,35 @@ public:
             handleInput(command);
         }
     }
+    void installCommand(const std::string& commandName) {
+        std::string sourceFilePath = "commands/" + commandName + ".hpp";
+        std::string destFilePath = "packages/" + commandName + ".so";
+
+        if (std::filesystem::exists(sourceFilePath)) {
+            std::string compileCommand = "g++ -shared -o " + destFilePath + " " + sourceFilePath;
+            if (system(compileCommand.c_str()) == 0) {
+                loadCommand(commandName);
+            } else {
+                std::cerr << "Error compiling command: " << commandName << std::endl;
+            }
+        } else {
+            std::cerr << "Command source not found: " << commandName << std::endl;
+        }
+    }
+
+    void loadCommand(const std::string& commandName) {
+        std::string libraryPath = "packages/lib" + commandName + ".so";
+        void* libraryHandle = dlopen(libraryPath.c_str(), RTLD_LAZY);
+        if (libraryHandle) {
+            loadedCommands[commandName] = libraryHandle;
+        } else {
+            std::cerr << "Error loading library: " << dlerror() << std::endl;
+        }
+    }
 
 private:
-    PackageManager packageManager;
+    PackageManager packageManager; // Declare and initialize here
+    std::map<std::string, void*> loadedCommands; // Add this line
 
     std::string getPrompt() {
         char cwd[1024];
@@ -147,20 +204,25 @@ private:
 
 
     void handleInput(const std::string& input) {
-        std::vector<std::string> tokens = splitInput(input);
-        if (tokens.empty()) {
-            return;
-        } 
-        std::string command = tokens[0];
-        if (command == "exit") {
-            exit(0);
+    std::vector<std::string> tokens = splitInput(input);
+    if (tokens.empty()) {
+        return;
+    } 
+    std::string command = tokens[0];
+    if (command == "exit") {
+        exit(0);
+    }
+    else if (command == "list") {
+        packageManager.listInstalledPackages(); // Use packageManager here
+    }
+    else if (command == "install") {
+        if (tokens.size() > 1) {
+            std::string packageName = tokens[1];
+            packageManager.installPackage(packageName); // Use packageManager here
+        } else {
+            displayErrorMessage("Package name not provided", "Please provide the name of the package to install.");
         }
-        else if (command == "list") {
-            packageManager.listInstalledPackages();
-        }
-        else if (command == "install") {
-            // ... (handle package installation)
-        }
+    }
         else if (command == "clear") {
             clearScreen();
         }
